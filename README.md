@@ -24,4 +24,4 @@ Run the server:
 CLIENT_SECRET={insert client secret} ./start.sh
 ```
 
-Go to http://localhost:8998.
+Go to [http://localhost:8998](http://localhost:8998).
