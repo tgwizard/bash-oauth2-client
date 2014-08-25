@@ -8,6 +8,7 @@ user_info_url=https://stage-id.valtech.com/api/users/me
 
 method=
 path=
+session_cookie=
 authorization_code=
 
 function parse_http_request {
@@ -18,7 +19,13 @@ function parse_http_request {
   while read var
   do
     var=$(echo $var | tr -d '\r\n')
-    #echo "$var"
+
+    # Extract session cookie
+    session_cookie_re="Cookie:.*bashsessionid=([^;]+);?.*"
+    if [[ "$var" =~ $session_cookie_re ]]; then
+      session_cookie=${BASH_REMATCH[1]}
+    fi
+
     if [ -z "$var" ]; then
       break
     fi
@@ -37,9 +44,21 @@ Content-Type: text/html
   This is a server running on netcat and bash.
   You can perform an authorization code grant flow.
   <a href=\"/sign-in\">Try it now!</a>
-  </p>
-</body>
-"
+  </p>"
+
+  if [[ -f ./sessions/$session_cookie.at ]]; then
+    access_token=$(cat ./sessions/$session_cookie.at)
+    user_info=$(curl -s -X GET -H "Authorization: Bearer $access_token" $user_info_url)
+    user_name_re=".*\"name\": \"([^\"]+)\".*"
+    if [[ "$user_info" =~ $user_name_re ]]; then
+      user_name=${BASH_REMATCH[1]}
+      echo "<p>You are signed in as $user_name.</p>"
+    fi
+  else
+    echo "<p>You are NOT signed in.</p>"
+  fi
+
+  echo "</body></html>"
 }
 
 function render_sign_in {
@@ -51,14 +70,17 @@ function render_sign_in_callback {
   at_response=$(curl -s -X POST -d "grant_type=authorization_code&client_id=$client_id&client_secret=$CLIENT_SECRET&code=$authorization_code" $token_url)
 
   at_re=".*\"access_token\": \"([^\"]+)\".*"
-  if [[ "$at_response" =~ $at_re ]]
-  then
+  if [[ "$at_response" =~ $at_re ]]; then
     access_token=${BASH_REMATCH[1]}
-    user_info=$(curl -s -X GET -H "Authorization: Bearer $access_token" $user_info_url)
+    session_id=$(uuidgen)
+    echo $access_token > ./sessions/$session_id.at
+    # We are redirecting using meta because the browser tries to
+    # load regular redirect targets too quickly for our netcat server.
     echo "HTTP/1.1 200 OK
-Content-Type: application/json
+Set-Cookie: bashsessionid=$session_id; Path=/; HttpOnly
+Content-Type: text/html
 
-$user_info
+<html><head><meta http-equiv=\"refresh\" content=\"1;URL=/\"></head></html>
 "
   else
     echo "HTTP/1.1 400 OK
@@ -85,14 +107,11 @@ Content-Type: text/html
 
 parse_http_request
 
-if [ "$path" == "/" ]
-then
+if [ "$path" == "/" ]; then
   render_start_page
-elif [ "$path" == "/sign-in" ]
-then
+elif [ "$path" == "/sign-in" ]; then
   render_sign_in
-elif [[ "$path" =~ ^/sign-in/callback\?code=(.+)$ ]]
-then
+elif [[ "$path" =~ ^/sign-in/callback\?code=(.+)$ ]]; then
   authorization_code=${BASH_REMATCH[1]}
   render_sign_in_callback
 else
