@@ -1,5 +1,11 @@
 set -e
 
+client_id=valtech.test.bash.local
+scope=profile%20email
+authorize_url=$(echo "https://stage-id.valtech.com/oauth2/authorize?response_type=code&client_id=$client_id&scope=$scope")
+token_url=https://stage-id.valtech.com/oauth2/token
+user_info_url=https://stage-id.valtech.com/api/users/me
+
 method=
 path=
 authorization_code=
@@ -38,17 +44,17 @@ Content-Type: text/html
 
 function render_sign_in {
   echo "HTTP/1.1 302 Found
-Location: https://stage-id.valtech.com/oauth2/authorize?response_type=code&client_id=valtech.test.bash.local&scope=profile%20email"
+Location: $authorize_url"
 }
 
 function render_sign_in_callback {
-  at_response=$(curl -s -X POST -d "grant_type=authorization_code&client_id=valtech.test.bash.local&client_secret=$CLIENT_SECRET&code=$authorization_code" https://stage-id.valtech.com/oauth2/token)
+  at_response=$(curl -s -X POST -d "grant_type=authorization_code&client_id=$client_id&client_secret=$CLIENT_SECRET&code=$authorization_code" $token_url)
 
   at_re=".*\"access_token\": \"([^\"]+)\".*"
   if [[ "$at_response" =~ $at_re ]]
   then
     access_token=${BASH_REMATCH[1]}
-    user_info=$(curl -s -X GET -H "Authorization: Bearer $access_token" https://stage-id.valtech.com/api/users/me)
+    user_info=$(curl -s -X GET -H "Authorization: Bearer $access_token" $user_info_url)
     echo "HTTP/1.1 200 OK
 Content-Type: application/json
 
