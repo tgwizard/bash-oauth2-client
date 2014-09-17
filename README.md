@@ -24,7 +24,7 @@ Go to [http://localhost:8998](http://localhost:8998).
 
 Sign in to Google and authorize the app to access your profile info.
 
-# Setting up your own OAuth 2 client at Google
+# Client registration at Google
 
 Go to https://console.developers.google.com, set up a new project.
 

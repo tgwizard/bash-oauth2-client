@@ -13,10 +13,20 @@ session_cookie=
 authorization_code=
 
 function parse_http_request {
-  # First read method and path
+  # an http (v 1.1) request looks like this:
+  #
+  #  METHOD /path HTTP/1.1
+  #  Header: value
+  #  Other-heder: value
+  #  Cookie: here-comes-the-cookies
+  #
+  #  request body
+  #
+  # the headers are separated from the body by an empty line
+  # we are interested in the method and the path (mostly the path)
   read method path version
-  # echo $method
-  # echo $path
+
+  # we are also interested in the "bashsessionid" session cookie
   while read var
   do
     var=$(echo $var | tr -d '\r\n')
@@ -24,6 +34,7 @@ function parse_http_request {
     # Extract session cookie
     session_cookie_re="Cookie:.*bashsessionid=([^;]+);?.*"
     if [[ "$var" =~ $session_cookie_re ]]; then
+      # yep, there was a cookie provided
       session_cookie=${BASH_REMATCH[1]}
     fi
 
@@ -49,8 +60,12 @@ Content-Type: text/html
   </p>"
 
   if [[ -f ./sessions/$session_cookie.at ]]; then
+    # We have an active session - the session cookie provided by the browser points
+    # to an access token stored on disk
     access_token=$(cat ./sessions/$session_cookie.at)
+    # fetch the user info resource
     user_info=$(curl -s -X GET -H "Authorization: Bearer $access_token" $user_info_url)
+    # and regex out the user's name
     user_name_re=".*\"displayName\": \"([^\"]+)\".*"
     if [[ "$user_info" =~ $user_name_re ]]; then
       user_name=${BASH_REMATCH[1]}
@@ -59,6 +74,7 @@ Content-Type: text/html
       echo "<pre>$user_info</pre>"
     fi
   else
+    # no session, not signed in
     echo "<p>You are NOT signed in.</p>"
   fi
 
@@ -71,15 +87,19 @@ Location: $authorize_url"
 }
 
 function render_sign_in_callback {
+  # exchange authorization code for an access token
   at_response=$(curl -s -X POST -d "grant_type=authorization_code&client_id=$client_id&client_secret=$client_secret&code=$authorization_code&redirect_uri=http%3A%2F%2Flocalhost%3A8998%2Fsign-in%2Fcallback" $token_url)
 
   at_re=".*\"access_token\" *: *\"([^\"]+)\".*"
   if [[ "$at_response" =~ $at_re ]]; then
+    # yep, we got an access token
     access_token=${BASH_REMATCH[1]}
+    # create a session, and store the access token on disk
     session_id=$(uuidgen)
     echo $access_token > ./sessions/$session_id.at
-    # We are redirecting using meta because the browser tries to
-    # load regular redirect targets too quickly for our netcat server.
+    # set session cookie
+    # we are redirecting using meta because the browser tries to
+    # load regular redirect targets too quickly for our netcat server
     echo "HTTP/1.1 200 OK
 Set-Cookie: bashsessionid=$session_id; Path=/; HttpOnly
 Content-Type: text/html
@@ -111,6 +131,7 @@ Content-Type: text/html
 
 parse_http_request
 
+# here we do our routing
 if [ "$path" == "/" ]; then
   render_start_page
 elif [ "$path" == "/sign-in" ]; then
