@@ -1,11 +1,14 @@
 # OAuth 2 client in written in bash and netcat
 
 This is a proof-of-concept OAuth 2 client written in bash and netcat.
-It integrates with Valtech IDP, Valtech's identity provider.
+It integrates with Google.
 
 # Local setup
 
 ## Prerequisites
+
+A modern version of netcat is required to run this.
+The one preinstalled on Mac OS X is not good enough.
 
 ```
 brew install netcat
@@ -13,15 +16,20 @@ brew install netcat
 
 ## Run
 
-You need an active account at Valtech to run this as is. It should be easy to port
-to other OAuth 2 providers.
-
-Fetch the client secret for the Bash Test Client from https://stage-id-admin.valtech.com.
-
-Run the server:
-
 ```
-CLIENT_SECRET={insert client secret} ./start.sh
+./start.sh
 ```
 
 Go to [http://localhost:8998](http://localhost:8998).
+
+Sign in to Google and authorize the app to access your profile info.
+
+# Setting up your own OAuth 2 client at Google
+
+Go to https://console.developers.google.com, set up a new project.
+
+ - Create OAuth credentials, and specify a redirect_uri.
+ - Make sure you add a support email on for the consent screen.
+ - Enable the Google+ API.
+
+You can revoke the access you granted to the client here: https://security.google.com/settings/security/permissions

@@ -1,10 +1,11 @@
 set -e
 
-client_id=valtech.test.bash.local
-scope=profile%20email
-authorize_url=$(echo "https://stage-id.valtech.com/oauth2/authorize?response_type=code&client_id=$client_id&scope=$scope")
-token_url=https://stage-id.valtech.com/oauth2/token
-user_info_url=https://stage-id.valtech.com/api/users/me
+client_id="430264288286-qgao3c1j7lal64i93gb598lil0l2mt7s.apps.googleusercontent.com"
+client_secret="2DxdS9frBTHkFf4eibgnBJpi"
+scope=profile
+authorize_url=$(echo "https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=$client_id&scope=$scope&redirect_uri=http%3A%2F%2Flocalhost%3A8998%2Fsign-in%2Fcallback")
+token_url=https://accounts.google.com/o/oauth2/token
+user_info_url=https://www.googleapis.com/plus/v1/people/me
 
 method=
 path=
@@ -37,22 +38,25 @@ function render_start_page {
 Content-Type: text/html
 
 <html>
-<head><title>BASH OAuth Client</title></head>
+<head><title>Bash OAuth2 Test Client</title></head>
 <body>
   <h1>Hi from bash!</h1>
   <p>
   This is a server running on netcat and bash.
-  You can perform an authorization code grant flow.
-  <a href=\"/sign-in\">Try it now!</a>
+  It can perform an OAuth 2 authorization code grant flow.
+  Try it now by
+  <a href=\"/sign-in\">signing in via Google</a>.
   </p>"
 
   if [[ -f ./sessions/$session_cookie.at ]]; then
     access_token=$(cat ./sessions/$session_cookie.at)
     user_info=$(curl -s -X GET -H "Authorization: Bearer $access_token" $user_info_url)
-    user_name_re=".*\"name\": \"([^\"]+)\".*"
+    user_name_re=".*\"displayName\": \"([^\"]+)\".*"
     if [[ "$user_info" =~ $user_name_re ]]; then
       user_name=${BASH_REMATCH[1]}
       echo "<p>You are signed in as $user_name.</p>"
+    else
+      echo "<pre>$user_info</pre>"
     fi
   else
     echo "<p>You are NOT signed in.</p>"
@@ -67,9 +71,9 @@ Location: $authorize_url"
 }
 
 function render_sign_in_callback {
-  at_response=$(curl -s -X POST -d "grant_type=authorization_code&client_id=$client_id&client_secret=$CLIENT_SECRET&code=$authorization_code" $token_url)
+  at_response=$(curl -s -X POST -d "grant_type=authorization_code&client_id=$client_id&client_secret=$client_secret&code=$authorization_code&redirect_uri=http%3A%2F%2Flocalhost%3A8998%2Fsign-in%2Fcallback" $token_url)
 
-  at_re=".*\"access_token\": \"([^\"]+)\".*"
+  at_re=".*\"access_token\" *: *\"([^\"]+)\".*"
   if [[ "$at_response" =~ $at_re ]]; then
     access_token=${BASH_REMATCH[1]}
     session_id=$(uuidgen)
@@ -97,7 +101,7 @@ function render_404 {
 Content-Type: text/html
 
 <html>
-<head><title>BASH OAuth Client</title></head>
+<head><title>Bash OAuth2 Test Client</title></head>
 <body>
   <h1>404 Not Found</h1>
   <p>Resource "$path" could not be found.</p>
