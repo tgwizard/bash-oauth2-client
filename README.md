@@ -26,6 +26,8 @@ Sign in to Google and authorize the app to access your profile info.
 
 # Client registration at Google
 
+This is not necessary to run the project, the client credentials are hard-coded.
+
 Go to https://console.developers.google.com, set up a new project.
 
  - Create OAuth credentials, and specify a redirect_uri.
