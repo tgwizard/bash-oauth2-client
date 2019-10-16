@@ -69,7 +69,7 @@ Content-Type: text/html
     user_name_re=".*\"displayName\": \"([^\"]+)\".*"
     if [[ "$user_info" =~ $user_name_re ]]; then
       user_name=${BASH_REMATCH[1]}
-      echo "<p>You are signed in as $user_name.</p>"
+      echo "<p>You are signed in as $user_name. <a href=\"/sign-out\">Sign out.</a></p>"
     else
       echo "<pre>$user_info</pre>"
     fi
@@ -116,6 +116,17 @@ $at_response
 
 }
 
+function render_sign_out {
+  rm ./sessions/$session_cookie.at
+  # same here, use meta refresh to delay the redirect.
+  echo "HTTP/1.1 200 OK
+Set-Cookie: bashsessionid=null; Path=/; HttpOnly; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+Content-Type: text/html
+
+<html><head><meta http-equiv=\"refresh\" content=\"1;URL=/\"></head></html>
+"
+}
+
 function render_404 {
   echo "HTTP/1.1 404 Not Found
 Content-Type: text/html
@@ -139,6 +150,8 @@ elif [ "$path" == "/sign-in" ]; then
 elif [[ "$path" =~ ^/sign-in/callback\?code=(.+)$ ]]; then
   authorization_code=${BASH_REMATCH[1]}
   render_sign_in_callback
+elif [ "$path" == "/sign-out" ]; then
+  render_sign_out
 else
   render_404
 fi
