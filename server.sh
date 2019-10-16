@@ -32,7 +32,7 @@ function parse_http_request {
     var=$(echo $var | tr -d '\r\n')
 
     # Extract session cookie
-    session_cookie_re="Cookie:.*bashsessionid=([^;]+);?.*"
+    session_cookie_re="Cookie:.*bashsessionid=([-A-F0-9]+);?.*"
     if [[ "$var" =~ $session_cookie_re ]]; then
       # yep, there was a cookie provided
       session_cookie=${BASH_REMATCH[1]}
